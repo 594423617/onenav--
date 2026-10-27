@@ -60,7 +60,12 @@
         <div class="layui-form-item">
             <label class="layui-form-label">到期时间</label>
             <div class="layui-input-block">
-            <input type="text" name="end_time" id = "end_time" readonly="readonly" value = "<?php echo date("Y-m-d",$subscribe['end_time']); ?>" autocomplete="off" placeholder="订阅到期时间" class="layui-input">
+            <input type="text" name="end_time" id="end_time" readonly="readonly"
+       value="<?php
+           $__et = $subscribe['end_time'] ?? '';
+           echo ( is_numeric($__et) && (int)$__et > 0 ) ? date("Y-m-d", (int)$__et) : '';
+       ?>"
+       autocomplete="off" placeholder="订阅到期时间" class="layui-input">
             </div>
         </div>
 
