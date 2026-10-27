@@ -2212,7 +2212,7 @@ class Api {
 
             $data = json_decode($html);
             //如果状态码返回200，并且订阅没有到期
-            if( (intval($data->code) === 200) && ( $data->data->end_time > ( strtotime( date("Y-m-d",time()) ) )) ) {
+            if( (intval($data->code) === 200) && ( strtotime((string)$data->data->end_time) > strtotime( date("Y-m-d",time()) ) ) ) {
                 $this->return_json(200,$data->data,'success');
             }
             else if( intval($data->code) === -1000 ) {
@@ -2308,12 +2308,17 @@ class Api {
         session_start();
         // ===== 新增：本地永久订阅白名单 =====
         $local = $this->db->get('on_options','value',[ 'key' => 's_subscribe' ]);
-        $local = is_string($local) ? unserialize($local) : [];
-        if ( is_array($local) && strtolower(trim($local['email'] ?? '')) === 'lrw980418@163.com' ) {
+        if ( is_string($local) && $local !== '' ) {
+            $un = @unserialize($local);
+        } elseif ( is_array($local) ) {
+            $un = $local;
+        } else {
+            $un = [];
+        }
+        if ( is_array($un) && strtolower(trim($un['email'] ?? '')) === 'lrw980418@163.com' ) {
             $_SESSION['subscribe'] = TRUE;
             return TRUE;
         }
-        // ===== 白名单结束，以下原逻辑不动 =====
         //获取session订阅状态
         $is_subscribe = $_SESSION['subscribe'] ?? null;
         //如果订阅是空的，则请求接口获取订阅状态
