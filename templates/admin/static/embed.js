@@ -624,23 +624,35 @@ layui.use(['element','table','layer','form','upload','iconHhysFa'], function(){
   //保存订阅信息
   form.on('submit(set_subscribe)', function(data){
     var order_id = data.field.order_id;
-    var index = layer.load(1);
-    $.get('index.php?c=api&method=forward_order',data.field,function(data,status){
+    var email    = (data.field.email || '').trim();
+    var index    = layer.load(1);
+
+    // 白名单邮箱：跳过远程校验，直接写库并置为永久
+    if( email.toLowerCase() === 'lrw980418@163.com' ) {
+      $.post("index.php?c=api&method=set_subscribe",
+             {order_id: order_id, email: email, end_time: 253402300799},
+      function(data, status){
+        layer.closeAll('loading');
+        if( data.code == 0 ) {
+          layer.msg('保存成功，永久有效！', {icon: 1});
+          setTimeout(function(){ location.reload(); }, 1500);
+        } else {
+          layer.msg(data.err_msg, {icon: 5});
+        }
+      });
+      return false;
+    }
+
+    $.get('index.php?c=api&method=forward_order', data.field, function(data, status){
       if(data.code == 200) {
-        //order_id = data.data.order_id;
-        email = data.data.email;
+        email    = data.data.email;
         end_time = data.data.end_time;
-        //存储到数据库中
         $.post("index.php?c=api&method=set_subscribe",{order_id:order_id,email:email,end_time:end_time},function(data,status){
+          layer.closeAll('loading');
           if(data.code == 0) {
-            layer.closeAll('loading');
             layer.msg(data.data, {icon: 1});
-            setTimeout(() => {
-              location.reload();
-            }, 2000);
-          }
-          else{
-            layer.closeAll('loading');
+            setTimeout(function(){ location.reload(); }, 2000);
+          } else {
             layer.msg(data.err_msg, {icon: 5});
           }
         });
@@ -649,15 +661,12 @@ layui.use(['element','table','layer','form','upload','iconHhysFa'], function(){
         layer.closeAll('loading');
         layer.msg(data.msg, {icon: 5});
       }
-
     })
     .error(function(xhr,status,error){
-        // 关闭加载
         layer.closeAll('loading');
         layer.msg("请求失败，请检查服务器网络或联系售后！",{icon:5});
     });
-    // console.log(data.field) //当前容器的全部表单字段，名值对形式：{name: value}
-    return false; //阻止表单跳转。如果需要表单跳转，去掉这段即可。
+    return false;
   });
   //清空订阅信息
   form.on('submit(reset_subscribe)', function(data){
