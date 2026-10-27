@@ -44,9 +44,9 @@ mkdir -p /data/wwwroot/default
 #chown -R www:www /data/wwwroot/default/
 #拉取代码
 cd /data/wwwroot/default
-#git glone https://github.com/l594423617/onenav.git .
+#git glone https://github.com/594423617/onenav--.git .
 rm -rf /data/wwwroot/default/*
-git clone https://github.com/l594423617/onenav.git .
+git clone https://github.com/594423617/onenav--.git .
 
 apk del git
 rm -rf .git
