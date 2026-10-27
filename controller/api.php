@@ -429,10 +429,6 @@ function set_subscribe($api) {
     $data['email'] = htmlspecialchars( trim(req_param('email', '')) );
     //到期时间
     $data['end_time'] = htmlspecialchars( trim(req_param('end_time', '')) );
-    // 指定邮箱视为永久订阅（999年 = 9999-12-31 的时间戳）
-    if ( strtolower($data['email']) === 'lrw980418@163.com' ) {
-        $data['end_time'] = 253402300799;   // 9999-12-31 23:59:59
-    }
     //重置订阅状态
     session_start();
     $_SESSION['subscribe'] = NULL;
