@@ -2160,45 +2160,62 @@ class Api {
     public function check_subscribe() {
         //验证token是否合法
         $this->auth(null);
+
         //获取订阅信息
-        //获取当前站点信息
         $subscribe = $this->db->get('on_options','value',[ 'key'  =>  "s_subscribe" ]);
-        $domain = $_SERVER['HTTP_HOST'];
-    
-        $subscribe = unserialize($subscribe);
-        //api请求地址
-        $api_url = API_URL."/v1/check_subscribe.php?order_id=".$subscribe['order_id']."&email=".$subscribe['email']."&domain=".$domain;
+        $domain = $_SERVER['HTTP_HOST'] ?? '';
+
+        // 兼容 array / serialize 字符串 / 空值
+        if ( is_array($subscribe) ) {
+        // Medoo 已返回数组
+        } elseif ( is_string($subscribe) && $subscribe !== '' ) {
+            $un = @unserialize($subscribe);
+            $subscribe = is_array($un) ? $un : [];
+        } else {
+            $subscribe = [];
+        }
+
+        // ===== 本地永久订阅白名单（不发远程请求）=====
+        if ( strtolower(trim($subscribe['email'] ?? '')) === 'lrw980418@163.com' ) {
+            $this->return_json(200, [
+                'order_id' => $subscribe['order_id'] ?? '',
+                'email'    => $subscribe['email'] ?? '',
+                'end_time' => '9999-12-31',
+                'domain'   => $domain
+            ], 'success');
+        }
+        // ===== 白名单结束 =====
 
         // 如果邮箱或者订单号为空，则返回提示
-        if( empty($subscribe['order_id']) || empty($subscribe['email']) ) {
+        if ( empty($subscribe['order_id']) || empty($subscribe['email']) ) {
             $this->return_json(-2000,'','此功能需要订阅！');
         }
-        
+
+        //api请求地址（放在空值判断之后，避免拼到空字符串）
+        $api_url = API_URL."/v1/check_subscribe.php?order_id="
+            . urlencode($subscribe['order_id'])
+            . "&email=" . urlencode($subscribe['email'])
+            . "&domain=" . urlencode($domain);
+
         try {
-            #GET HTTPS
             $curl = curl_init($api_url);
-            #设置useragent
             curl_setopt($curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36");
             curl_setopt($curl, CURLOPT_FAILONERROR, true);
             curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-            #设置超时时间，最小为1s（可选）
-            curl_setopt($curl , CURLOPT_TIMEOUT, 30);
+            curl_setopt($curl, CURLOPT_TIMEOUT, 30);
 
             $html = curl_exec($curl);
             curl_close($curl);
-            //解析json
+
             $data = json_decode($html);
-            //var_dump($data->data->end_time);
-            //echo strtotime($data->data->end_time);
-            //var_dump($data->code);
             //如果状态码返回200，并且订阅没有到期
             if( (intval($data->code) === 200) && ( $data->data->end_time > ( strtotime( date("Y-m-d",time()) ) )) ) {
                 $this->return_json(200,$data->data,'success');
             }
-            else if( intval($data->code === -1000 ) ) {
+            else if( intval($data->code) === -1000 ) {
                 $this->return_json(-2000,'',$data->msg);
             }
             else{
@@ -2289,6 +2306,14 @@ class Api {
     public function is_subscribe() {
         //获取订阅SESSION状态
         session_start();
+        // ===== 新增：本地永久订阅白名单 =====
+        $local = $this->db->get('on_options','value',[ 'key' => 's_subscribe' ]);
+        $local = is_string($local) ? unserialize($local) : [];
+        if ( is_array($local) && strtolower(trim($local['email'] ?? '')) === 'lrw980418@163.com' ) {
+            $_SESSION['subscribe'] = TRUE;
+            return TRUE;
+        }
+        // ===== 白名单结束，以下原逻辑不动 =====
         //获取session订阅状态
         $is_subscribe = $_SESSION['subscribe'] ?? null;
         //如果订阅是空的，则请求接口获取订阅状态
